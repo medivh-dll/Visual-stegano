@@ -1,0 +1,1017 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visual Cryptography</title>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0d0d0d;
+            --surface: #151515;
+            --surface2: #1e1e1e;
+            --border: #2a2a2a;
+            --accent: #c8f55a;
+            --accent2: #5af5c8;
+            --text: #e8e8e8;
+            --text-dim: #888;
+            --error: #f55a5a;
+            --success: #5af5a0;
+            --info: #5ac8f5;
+            --font-mono: 'Space Mono', monospace;
+            --font-body: 'DM Sans', sans-serif;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: var(--font-body);
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image:
+                linear-gradient(rgba(200,245,90,0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(200,245,90,0.03) 1px, transparent 1px);
+            background-size: 40px 40px;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .layout {
+            position: relative;
+            z-index: 1;
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        header {
+            display: flex;
+            align-items: baseline;
+            gap: 1.5rem;
+            padding: 2.5rem 0 3rem;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 2.5rem;
+        }
+
+        header h1 {
+            font-family: var(--font-mono);
+            font-size: 1.6rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            color: var(--accent);
+        }
+
+        header p {
+            font-size: 0.875rem;
+            color: var(--text-dim);
+            font-weight: 300;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 0;
+            border: 1px solid var(--border);
+            border-radius: 2px;
+            overflow: hidden;
+            margin-bottom: 2rem;
+            width: fit-content;
+        }
+
+        .tab-btn {
+            padding: 0.6rem 1.4rem;
+            background: var(--surface);
+            border: none;
+            color: var(--text-dim);
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.15s;
+            letter-spacing: 0.05em;
+        }
+
+        .tab-btn + .tab-btn { border-left: 1px solid var(--border); }
+
+        .tab-btn.active {
+            background: var(--accent);
+            color: #0d0d0d;
+            font-weight: 700;
+        }
+
+        .tab-btn:not(.active):hover {
+            background: var(--surface2);
+            color: var(--text);
+        }
+
+        .tab-pane { display: none; }
+        .tab-pane.active { display: block; }
+
+        .two-col {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            align-items: start;
+        }
+
+        @media (max-width: 768px) {
+            .two-col { grid-template-columns: 1fr; }
+        }
+
+        .panel {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 2px;
+        }
+
+        .panel-header {
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid var(--border);
+            font-family: var(--font-mono);
+            font-size: 0.72rem;
+            color: var(--text-dim);
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .panel-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--border);
+        }
+
+        .panel-dot.active { background: var(--accent); }
+
+        .panel-body { padding: 1.25rem; }
+
+        .form-group { margin-bottom: 1.25rem; }
+        .form-group:last-child { margin-bottom: 0; }
+
+        label {
+            display: block;
+            font-size: 0.8rem;
+            color: var(--text-dim);
+            margin-bottom: 0.4rem;
+            font-family: var(--font-mono);
+            letter-spacing: 0.05em;
+        }
+
+        input[type="text"], input[type="number"] {
+            width: 100%;
+            padding: 0.75rem;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            color: var(--text);
+            font-family: var(--font-mono);
+            font-size: 0.82rem;
+            border-radius: 2px;
+            transition: border-color 0.15s;
+        }
+
+        input[type="number"] { width: 80px; }
+
+        input[type="text"]:focus, input[type="number"]:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .drop-zone {
+            border: 1px dashed var(--border);
+            border-radius: 2px;
+            padding: 2rem 1.5rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.15s;
+            position: relative;
+            background: var(--surface2);
+        }
+
+        .drop-zone:hover, .drop-zone.dragover {
+            border-color: var(--accent);
+            background: rgba(200,245,90,0.04);
+        }
+
+        .drop-zone input[type="file"] {
+            position: absolute;
+            inset: 0;
+            opacity: 0;
+            cursor: pointer;
+            width: 100%;
+            height: 100%;
+        }
+
+        .drop-icon {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+            opacity: 0.4;
+        }
+
+        .drop-text {
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            color: var(--text-dim);
+        }
+
+        .drop-text span {
+            color: var(--accent);
+        }
+
+        .preview-box {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: 2px;
+            min-height: 160px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .preview-box canvas, .preview-box img {
+            max-width: 100%;
+            max-height: 220px;
+            display: block;
+            image-rendering: pixelated;
+        }
+
+        .preview-empty {
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            color: var(--text-dim);
+            opacity: 0.5;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.25rem 0.6rem;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: 2px;
+            font-family: var(--font-mono);
+            font-size: 0.7rem;
+            color: var(--text-dim);
+            margin-top: 0.5rem;
+        }
+
+        .btn {
+            padding: 0.65rem 1.4rem;
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            border: none;
+            border-radius: 2px;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: #0d0d0d;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background: #d4f770;
+            transform: translateY(-1px);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        .btn-ghost {
+            background: transparent;
+            color: var(--text-dim);
+            border: 1px solid var(--border);
+        }
+
+        .btn-ghost:hover:not(:disabled) {
+            border-color: var(--accent2);
+            color: var(--accent2);
+        }
+
+        .btn-ghost:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        .btn-row {
+            display: flex;
+            gap: 0.75rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .status-msg {
+            margin-top: 1rem;
+            padding: 0.6rem 0.9rem;
+            border-radius: 2px;
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            border-left: 2px solid;
+            display: none;
+        }
+
+        .status-msg.info    { background: rgba(90,200,245,0.08); border-color: var(--info);    color: var(--info); }
+        .status-msg.success { background: rgba(90,245,160,0.08); border-color: var(--success); color: var(--success); }
+        .status-msg.error   { background: rgba(245,90,90,0.08);  border-color: var(--error);   color: var(--error); }
+        .status-msg.visible { display: block; }
+
+        .spinner {
+            width: 14px; height: 14px;
+            border: 2px solid rgba(13,13,13,0.2);
+            border-top-color: #0d0d0d;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+            display: none;
+        }
+
+        .spinner.visible { display: inline-block; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Reveal overlay section */
+        .reveal-section {
+            margin-top: 1.5rem;
+        }
+
+        .three-col {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 1.5rem;
+            align-items: start;
+        }
+
+        @media (max-width: 900px) {
+            .three-col { grid-template-columns: 1fr; }
+        }
+
+        .overlay-indicator {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-family: var(--font-mono);
+            font-size: 0.7rem;
+            color: var(--text-dim);
+            margin-top: 0.5rem;
+        }
+
+        .overlay-indicator::before {
+            content: '';
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border: 1px solid var(--border);
+            background: repeating-linear-gradient(
+                45deg,
+                var(--border),
+                var(--border) 1px,
+                transparent 1px,
+                transparent 3px
+            );
+        }
+
+        /* Text canvas styling */
+        .text-options {
+            display: flex;
+            gap: 0.75rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .text-options label { margin-bottom: 0; }
+
+        select {
+            padding: 0.5rem 0.75rem;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            color: var(--text);
+            font-family: var(--font-mono);
+            font-size: 0.78rem;
+            border-radius: 2px;
+            cursor: pointer;
+        }
+
+        select:focus { outline: none; border-color: var(--accent); }
+
+        .info-box {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-left: 2px solid var(--accent);
+            border-radius: 2px;
+            padding: 0.9rem 1rem;
+            font-size: 0.82rem;
+            color: var(--text-dim);
+            line-height: 1.6;
+            margin-bottom: 1.5rem;
+        }
+
+        .info-box strong { color: var(--accent); font-family: var(--font-mono); }
+
+        .share-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        .download-card {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: 2px;
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .download-card canvas {
+            max-width: 100%;
+            image-rendering: pixelated;
+        }
+
+        .share-label {
+            font-family: var(--font-mono);
+            font-size: 0.7rem;
+            color: var(--text-dim);
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+        }
+
+        .pixel-scale {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .pixel-scale label { margin-bottom: 0; }
+
+        hr.divider {
+            border: none;
+            border-top: 1px solid var(--border);
+            margin: 1.5rem 0;
+        }
+    </style>
+</head>
+<body>
+<div class="layout">
+    <header>
+        <h1>// visual_crypto</h1>
+        <p>Split secrets into noise — reveal only when combined</p>
+    </header>
+
+    <div class="tabs">
+        <button class="tab-btn active" onclick="switchTab('split')">SPLIT</button>
+        <button class="tab-btn" onclick="switchTab('reveal')">REVEAL</button>
+    </div>
+
+    <!-- ═══════════════════════════════════════ SPLIT TAB -->
+    <div class="tab-pane active" id="tab-split">
+
+        <div class="info-box">
+            <strong>How it works:</strong> Your secret image is split into two random-looking "shares" — meaningless noise on their own.
+            Only when both shares are physically overlaid does the secret become visible. No key, no password — pure mathematics.
+        </div>
+
+        <div class="two-col">
+            <!-- Input panel -->
+            <div class="panel">
+                <div class="panel-header"><span class="panel-dot active"></span>SECRET INPUT</div>
+                <div class="panel-body">
+
+                    <div class="form-group">
+                        <label>INPUT MODE</label>
+                        <div class="tabs" style="margin-bottom:0;">
+                            <button class="tab-btn active" id="modeImgBtn" onclick="setInputMode('image')">IMAGE</button>
+                            <button class="tab-btn" id="modeTextBtn" onclick="setInputMode('text')">TEXT</button>
+                        </div>
+                    </div>
+
+                    <!-- Image input -->
+                    <div id="imageInputSection" class="form-group">
+                        <label>CARRIER IMAGE</label>
+                        <div class="drop-zone" id="secretDropZone">
+                            <input type="file" id="secretFile" accept="image/*" onchange="handleSecretImage(this.files[0])">
+                            <div class="drop-icon">🖼</div>
+                            <div class="drop-text">Drop image or <span>click to browse</span></div>
+                        </div>
+                        <div id="secretBadge" style="display:none;" class="badge">—</div>
+                    </div>
+
+                    <!-- Text input -->
+                    <div id="textInputSection" class="form-group" style="display:none;">
+                        <label>SECRET TEXT</label>
+                        <input type="text" id="secretText" placeholder="Enter your secret message…" maxlength="24">
+                        <div style="margin-top:0.75rem;" class="text-options">
+                            <label>SIZE</label>
+                            <select id="textSize">
+                                <option value="24">Small (24px)</option>
+                                <option value="36" selected>Medium (36px)</option>
+                                <option value="48">Large (48px)</option>
+                            </select>
+                            <label style="margin-left:0.5rem;">STYLE</label>
+                            <select id="textStyle">
+                                <option value="bold">Bold</option>
+                                <option value="normal">Normal</option>
+                            </select>
+                        </div>
+                        <div style="margin-top:0.75rem;">
+                            <label>PREVIEW</label>
+                            <div class="preview-box" style="min-height:80px;">
+                                <canvas id="textPreviewCanvas"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Secret preview -->
+                    <div id="secretPreviewSection" class="form-group" style="display:none;">
+                        <label>PREVIEW</label>
+                        <div class="preview-box">
+                            <canvas id="secretCanvas"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>PIXEL BLOCK SIZE</label>
+                        <div class="pixel-scale">
+                            <input type="number" id="blockSize" value="2" min="1" max="8">
+                            <span style="font-family:var(--font-mono);font-size:0.75rem;color:var(--text-dim);">px per bit (larger = easier to overlay)</span>
+                        </div>
+                    </div>
+
+                    <div class="btn-row">
+                        <button class="btn btn-primary" id="splitBtn" onclick="splitSecret()" disabled>SPLIT SECRET</button>
+                        <div class="spinner" id="splitSpinner"></div>
+                    </div>
+                    <div class="status-msg" id="splitStatus"></div>
+                </div>
+            </div>
+
+            <!-- Output panel -->
+            <div class="panel">
+                <div class="panel-header"><span class="panel-dot" id="outputDot"></span>GENERATED SHARES</div>
+                <div class="panel-body">
+                    <div class="share-row">
+                        <div class="download-card">
+                            <div class="share-label">Share A</div>
+                            <div class="preview-box" style="min-height:120px; width:100%;">
+                                <canvas id="shareACanvas"></canvas>
+                                <div class="preview-empty" id="shareAEmpty">awaiting split</div>
+                            </div>
+                            <button class="btn btn-ghost" id="dlShareA" onclick="downloadShare('A')" disabled style="width:100%;margin-top:0.5rem;">↓ SHARE A</button>
+                        </div>
+                        <div class="download-card">
+                            <div class="share-label">Share B</div>
+                            <div class="preview-box" style="min-height:120px; width:100%;">
+                                <canvas id="shareBCanvas"></canvas>
+                                <div class="preview-empty" id="shareBEmpty">awaiting split</div>
+                            </div>
+                            <button class="btn btn-ghost" id="dlShareB" onclick="downloadShare('B')" disabled style="width:100%;margin-top:0.5rem;">↓ SHARE B</button>
+                        </div>
+                    </div>
+
+                    <hr class="divider">
+
+                    <div>
+                        <label style="margin-bottom:0.75rem;display:block;">COMBINED PREVIEW (overlay simulation)</label>
+                        <div class="preview-box" style="min-height:140px;">
+                            <canvas id="combinedCanvas"></canvas>
+                            <div class="preview-empty" id="combinedEmpty">split an image to preview</div>
+                        </div>
+                        <div class="overlay-indicator" id="overlayNote" style="display:none;">
+                            OR-overlay of both shares — secret revealed
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════ REVEAL TAB -->
+    <div class="tab-pane" id="tab-reveal">
+
+        <div class="info-box">
+            <strong>Reveal:</strong> Upload both share images generated by the Split tool. The secret will be revealed by overlaying them.
+            Neither share alone reveals anything — you need both.
+        </div>
+
+        <div class="three-col">
+            <!-- Share A upload -->
+            <div class="panel">
+                <div class="panel-header"><span class="panel-dot"></span>SHARE A</div>
+                <div class="panel-body">
+                    <div class="drop-zone">
+                        <input type="file" accept="image/*,.png" onchange="handleRevealShare('A', this.files[0])">
+                        <div class="drop-icon">🔲</div>
+                        <div class="drop-text">Drop <span>Share A</span></div>
+                    </div>
+                    <div class="preview-box" style="margin-top:0.75rem; min-height:100px;">
+                        <canvas id="revShareACanvas"></canvas>
+                        <div class="preview-empty" id="revShareAEmpty">no share loaded</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Share B upload -->
+            <div class="panel">
+                <div class="panel-header"><span class="panel-dot"></span>SHARE B</div>
+                <div class="panel-body">
+                    <div class="drop-zone">
+                        <input type="file" accept="image/*,.png" onchange="handleRevealShare('B', this.files[0])">
+                        <div class="drop-icon">🔲</div>
+                        <div class="drop-text">Drop <span>Share B</span></div>
+                    </div>
+                    <div class="preview-box" style="margin-top:0.75rem; min-height:100px;">
+                        <canvas id="revShareBCanvas"></canvas>
+                        <div class="preview-empty" id="revShareBEmpty">no share loaded</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Revealed -->
+            <div class="panel">
+                <div class="panel-header"><span class="panel-dot" id="revealDot"></span>REVEALED SECRET</div>
+                <div class="panel-body">
+                    <div class="preview-box" style="min-height:180px;">
+                        <canvas id="revealedCanvas"></canvas>
+                        <div class="preview-empty" id="revealedEmpty">load both shares to reveal</div>
+                    </div>
+                    <div style="margin-top:0.75rem;">
+                        <button class="btn btn-ghost" id="dlRevealed" onclick="downloadRevealed()" disabled>↓ DOWNLOAD REVEALED</button>
+                    </div>
+                    <div class="status-msg" id="revealStatus"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// ─────────────────────────────────────────────────────────────────
+// STATE
+// ─────────────────────────────────────────────────────────────────
+let inputMode = 'image';
+let secretImageData = null; // ImageData (black/white threshold)
+let shareABlob = null, shareBBlob = null;
+let revShareA = null, revShareB = null;
+
+// ─────────────────────────────────────────────────────────────────
+// TABS
+// ─────────────────────────────────────────────────────────────────
+function switchTab(name) {
+    document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('tab-' + name).classList.add('active');
+    event.target.classList.add('active');
+}
+
+// ─────────────────────────────────────────────────────────────────
+// INPUT MODE
+// ─────────────────────────────────────────────────────────────────
+function setInputMode(mode) {
+    inputMode = mode;
+    document.getElementById('modeImgBtn').classList.toggle('active', mode === 'image');
+    document.getElementById('modeTextBtn').classList.toggle('active', mode === 'text');
+    document.getElementById('imageInputSection').style.display = mode === 'image' ? '' : 'none';
+    document.getElementById('textInputSection').style.display = mode === 'text' ? '' : 'none';
+    document.getElementById('secretPreviewSection').style.display = 'none';
+    secretImageData = null;
+    checkSplitReady();
+
+    if (mode === 'text') {
+        renderTextPreview();
+        document.getElementById('secretText').oninput = () => renderTextPreview();
+        document.getElementById('textSize').onchange = () => renderTextPreview();
+        document.getElementById('textStyle').onchange = () => renderTextPreview();
+    }
+}
+
+function renderTextPreview() {
+    const text = document.getElementById('secretText').value || 'SECRET';
+    const size = parseInt(document.getElementById('textSize').value);
+    const style = document.getElementById('textStyle').value;
+    const canvas = document.getElementById('textPreviewCanvas');
+    const ctx = canvas.getContext('2d');
+
+    canvas.width = 400;
+    canvas.height = size * 2.2;
+
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#000';
+    ctx.font = `${style} ${size}px Space Mono, monospace`;
+    ctx.textBaseline = 'middle';
+    ctx.fillText(text, 12, canvas.height / 2);
+
+    // Convert to binarised secret
+    secretImageData = binarise(ctx.getImageData(0, 0, canvas.width, canvas.height));
+    checkSplitReady();
+}
+
+// ─────────────────────────────────────────────────────────────────
+// HELPERS
+// ─────────────────────────────────────────────────────────────────
+function showStatus(el, msg, type) {
+    el.textContent = msg;
+    el.className = `status-msg ${type} visible`;
+}
+
+function binarise(imgData) {
+    // Convert to greyscale + threshold → 0 (black) or 255 (white)
+    const d = imgData.data;
+    for (let i = 0; i < d.length; i += 4) {
+        const lum = 0.299 * d[i] + 0.587 * d[i+1] + 0.114 * d[i+2];
+        const val = lum < 128 ? 0 : 255;
+        d[i] = d[i+1] = d[i+2] = val;
+        d[i+3] = 255;
+    }
+    return imgData;
+}
+
+function checkSplitReady() {
+    document.getElementById('splitBtn').disabled = !secretImageData;
+}
+
+// ─────────────────────────────────────────────────────────────────
+// IMAGE UPLOAD
+// ─────────────────────────────────────────────────────────────────
+function handleSecretImage(file) {
+    if (!file) return;
+    const badge = document.getElementById('secretBadge');
+    badge.textContent = `${file.name} · ${(file.size/1024).toFixed(1)} KB`;
+    badge.style.display = '';
+
+    const reader = new FileReader();
+    reader.onload = e => {
+        const img = new Image();
+        img.onload = () => {
+            // Limit size to avoid huge canvases
+            const maxDim = 300;
+            let w = img.width, h = img.height;
+            if (w > maxDim || h > maxDim) {
+                const scale = maxDim / Math.max(w, h);
+                w = Math.round(w * scale);
+                h = Math.round(h * scale);
+            }
+
+            const canvas = document.getElementById('secretCanvas');
+            canvas.width = w; canvas.height = h;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, w, h);
+
+            const rawData = ctx.getImageData(0, 0, w, h);
+            secretImageData = binarise(rawData);
+            ctx.putImageData(secretImageData, 0, 0);
+
+            document.getElementById('secretPreviewSection').style.display = '';
+            checkSplitReady();
+        };
+        img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+}
+
+// Drag and drop
+const dz = document.getElementById('secretDropZone');
+dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('dragover'); });
+dz.addEventListener('dragleave', () => dz.classList.remove('dragover'));
+dz.addEventListener('drop', e => {
+    e.preventDefault();
+    dz.classList.remove('dragover');
+    const file = e.dataTransfer.files[0];
+    if (file && file.type.startsWith('image/')) handleSecretImage(file);
+});
+
+// ─────────────────────────────────────────────────────────────────
+// VISUAL CRYPTOGRAPHY SPLIT (2-out-of-2 scheme)
+// Each black pixel → two random complementary 2x2 blocks
+// Each white pixel → two identical random 2x2 blocks
+// ─────────────────────────────────────────────────────────────────
+
+// The classic (2,2) VC scheme uses 2x2 pixel blocks
+// For each secret pixel:
+//   BLACK: one of the 6 complementary pairs (combined = all black = 50% grey)
+//   WHITE: one of the 6 identical pairs (combined = 50% grey same pattern)
+// After OR: black pixels → all 4 cells black; white pixels → 2/4 cells black
+
+const BLACK_PATTERNS = [
+    [[1,0],[0,1]], [[0,1],[1,0]],
+    [[1,1],[0,0]], [[0,0],[1,1]],
+    [[1,0],[1,0]], [[0,1],[0,1]]
+];
+
+const WHITE_PATTERNS = [
+    [[1,0],[0,0]], [[0,1],[0,0]],
+    [[0,0],[1,0]], [[0,0],[0,1]],
+    [[1,1],[0,0]], [[0,0],[1,1]]
+];
+
+function splitSecret() {
+    if (!secretImageData) return;
+
+    const btn = document.getElementById('splitBtn');
+    const spinner = document.getElementById('splitSpinner');
+    const status = document.getElementById('splitStatus');
+    btn.disabled = true;
+    spinner.classList.add('visible');
+    showStatus(status, 'Generating shares…', 'info');
+
+    setTimeout(() => {
+        try {
+            const block = Math.max(1, Math.min(8, parseInt(document.getElementById('blockSize').value) || 2));
+            const src = secretImageData;
+            const sw = src.width, sh = src.height;
+
+            // Output canvas size = 2*block per pixel (2x2 pattern scaled by block)
+            const ow = sw * 2 * block, oh = sh * 2 * block;
+
+            const cA = document.getElementById('shareACanvas');
+            const cB = document.getElementById('shareBCanvas');
+            const cC = document.getElementById('combinedCanvas');
+            cA.width = cB.width = cC.width = ow;
+            cA.height = cB.height = cC.height = oh;
+
+            const ctxA = cA.getContext('2d');
+            const ctxB = cB.getContext('2d');
+            const ctxC = cC.getContext('2d');
+
+            const imgA = ctxA.createImageData(ow, oh);
+            const imgB = ctxB.createImageData(ow, oh);
+            const imgC = ctxC.createImageData(ow, oh);
+
+            const dA = imgA.data, dB = imgB.data, dC = imgC.data;
+
+            for (let py = 0; py < sh; py++) {
+                for (let px = 0; px < sw; px++) {
+                    const srcIdx = (py * sw + px) * 4;
+                    const isBlack = src.data[srcIdx] < 128;
+
+                    const patterns = isBlack ? BLACK_PATTERNS : WHITE_PATTERNS;
+                    const pi = Math.floor(Math.random() * patterns.length);
+                    const patA = patterns[pi];
+
+                    // Complementary pattern for B when black, same when white
+                    let patB;
+                    if (isBlack) {
+                        patB = patA.map(row => row.map(v => 1 - v));
+                    } else {
+                        patB = patA.map(row => [...row]);
+                    }
+
+                    // Write 2x2 block (scaled by `block`)
+                    for (let by = 0; by < 2; by++) {
+                        for (let bx = 0; bx < 2; bx++) {
+                            const vA = patA[by][bx] ? 0 : 255;
+                            const vB = patB[by][bx] ? 0 : 255;
+                            const vC = (patA[by][bx] | patB[by][bx]) ? 0 : 255;
+
+                            for (let sy = 0; sy < block; sy++) {
+                                for (let sx = 0; sx < block; sx++) {
+                                    const ox = (px * 2 + bx) * block + sx;
+                                    const oy = (py * 2 + by) * block + sy;
+                                    const oi = (oy * ow + ox) * 4;
+
+                                    dA[oi] = dA[oi+1] = dA[oi+2] = vA; dA[oi+3] = 255;
+                                    dB[oi] = dB[oi+1] = dB[oi+2] = vB; dB[oi+3] = 255;
+                                    dC[oi] = dC[oi+1] = dC[oi+2] = vC; dC[oi+3] = 255;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            ctxA.putImageData(imgA, 0, 0);
+            ctxB.putImageData(imgB, 0, 0);
+            ctxC.putImageData(imgC, 0, 0);
+
+            // Hide placeholders
+            document.getElementById('shareAEmpty').style.display = 'none';
+            document.getElementById('shareBEmpty').style.display = 'none';
+            document.getElementById('combinedEmpty').style.display = 'none';
+            document.getElementById('overlayNote').style.display = '';
+            document.getElementById('outputDot').classList.add('active');
+
+            // Enable downloads
+            document.getElementById('dlShareA').disabled = false;
+            document.getElementById('dlShareB').disabled = false;
+
+            // Store blobs
+            cA.toBlob(b => shareABlob = b, 'image/png');
+            cB.toBlob(b => shareBBlob = b, 'image/png');
+
+            showStatus(status, `✓ Two shares generated — ${ow}×${oh}px each. Distribute separately!`, 'success');
+        } catch(err) {
+            showStatus(status, '✗ ' + err.message, 'error');
+        } finally {
+            btn.disabled = false;
+            spinner.classList.remove('visible');
+            checkSplitReady();
+        }
+    }, 30);
+}
+
+function downloadShare(which) {
+    const canvas = document.getElementById(which === 'A' ? 'shareACanvas' : 'shareBCanvas');
+    const a = document.createElement('a');
+    a.href = canvas.toDataURL('image/png');
+    a.download = `share_${which}_${Date.now()}.png`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+}
+
+// ─────────────────────────────────────────────────────────────────
+// REVEAL TAB
+// ─────────────────────────────────────────────────────────────────
+function handleRevealShare(which, file) {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+        const img = new Image();
+        img.onload = () => {
+            const id = which === 'A' ? 'revShareACanvas' : 'revShareBCanvas';
+            const emId = which === 'A' ? 'revShareAEmpty' : 'revShareBEmpty';
+            const canvas = document.getElementById(id);
+            canvas.width = img.width;
+            canvas.height = img.height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0);
+            document.getElementById(emId).style.display = 'none';
+
+            if (which === 'A') revShareA = { img, w: img.width, h: img.height };
+            else revShareB = { img, w: img.width, h: img.height };
+
+            if (revShareA && revShareB) revealCombine();
+        };
+        img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+}
+
+function revealCombine() {
+    const status = document.getElementById('revealStatus');
+    const a = revShareA, b = revShareB;
+
+    if (a.w !== b.w || a.h !== b.h) {
+        showStatus(status, '✗ Share dimensions do not match — are these from the same split?', 'error');
+        return;
+    }
+
+    const w = a.w, h = a.h;
+    const offA = document.createElement('canvas'); offA.width = w; offA.height = h;
+    const offB = document.createElement('canvas'); offB.width = w; offB.height = h;
+    const ctxA = offA.getContext('2d'); ctxA.drawImage(a.img, 0, 0);
+    const ctxB = offB.getContext('2d'); ctxB.drawImage(b.img, 0, 0);
+
+    const dA = ctxA.getImageData(0, 0, w, h).data;
+    const dB = ctxB.getImageData(0, 0, w, h).data;
+
+    const out = document.getElementById('revealedCanvas');
+    out.width = w; out.height = h;
+    const ctxOut = out.getContext('2d');
+    const imgOut = ctxOut.createImageData(w, h);
+    const dOut = imgOut.data;
+
+    for (let i = 0; i < dA.length; i += 4) {
+        // OR operation: if either share is black, result is black
+        const vA = dA[i] < 128 ? 0 : 1;
+        const vB = dB[i] < 128 ? 0 : 1;
+        const v = (vA | vB) ? 255 : 0;
+        // Invert so combined black (OR=1) shows dark
+        const final = vA === 0 || vB === 0 ? 0 : 255;
+        dOut[i] = dOut[i+1] = dOut[i+2] = final; dOut[i+3] = 255;
+    }
+
+    ctxOut.putImageData(imgOut, 0, 0);
+    document.getElementById('revealedEmpty').style.display = 'none';
+    document.getElementById('revealDot').classList.add('active');
+    document.getElementById('dlRevealed').disabled = false;
+    showStatus(status, '✓ Secret revealed by overlay!', 'success');
+}
+
+function downloadRevealed() {
+    const canvas = document.getElementById('revealedCanvas');
+    const a = document.createElement('a');
+    a.href = canvas.toDataURL('image/png');
+    a.download = `revealed_${Date.now()}.png`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+}
+</script>
+</body>
+</html>
