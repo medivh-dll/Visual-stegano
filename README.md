@@ -2,7 +2,7 @@
 
 A browser-based visual cryptography tool. Split any image or text into two random-looking shares — neither reveals anything alone. Overlay both to expose the secret. No server, no key, no password. Pure math.
 
-Part of the [covert-tools](../) collection alongside `steganography_studio` and `steganography_detector`.
+Part of the [covert-tools] collection alongside `steganography_studio` and `steganography_detector`.
 
 ---
 
