@@ -4,6 +4,8 @@ A browser-based visual cryptography tool. Split any image or text into two rando
 
 Part of the [covert-tools] collection alongside `steganography_studio` and `steganography_detector`.
 
+https://medivh-dll.github.io/Visual-stegano/
+
 ---
 
 ## What is Visual Cryptography?
